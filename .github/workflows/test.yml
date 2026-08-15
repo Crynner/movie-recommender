@@ -21,20 +21,20 @@ jobs:
           cache: 'npm'
 
       - name: Install root dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Install server dependencies
         working-directory: ./server
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Install client dependencies
         working-directory: ./client
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run Backend Tests
         working-directory: ./server
-        run: npx vitest run
+        run: npm run test
 
       - name: Run Frontend Tests
         working-directory: ./client
-        run: npx vitest run
+        run: npm run test
