@@ -20,8 +20,21 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm run install:all
+      - name: Install root dependencies
+        run: npm ci
 
-      - name: Run Vitest
-        run: npm run test
+      - name: Install server dependencies
+        working-directory: ./server
+        run: npm ci
+
+      - name: Install client dependencies
+        working-directory: ./client
+        run: npm ci
+
+      - name: Run Backend Tests
+        working-directory: ./server
+        run: npx vitest run
+
+      - name: Run Frontend Tests
+        working-directory: ./client
+        run: npx vitest run
