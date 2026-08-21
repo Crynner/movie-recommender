@@ -37,3 +37,7 @@ export const getRandomMovie = async (_req, res) => {
         res.status(500).json({ message: err.message })
     }
 }
+
+export const getLikeMovies = async(_req, res) => {
+    // return in 60/30/10 style, genre-releaseyear-director
+}
