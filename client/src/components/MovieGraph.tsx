@@ -91,16 +91,19 @@ export default function MovieGraph({ movieId, title, year }: Readonly<Props>) {
 
         fetchRecommendedMovies(movieId, controller.signal)
             .then(async (relatedMovies) => {
-                let updatedGraph = addRelatedMovies(createGraph({ id: movieId, title, year }), movieId, relatedMovies, MAX_RELATED_PER_MOVIE);
+                // prevent processing unrendered recommendations (causes visual bug)
+                const relatedMoviesSliced = relatedMovies.slice(0, MAX_RELATED_PER_MOVIE);
+                let updatedGraph = addRelatedMovies(createGraph({ id: movieId, title, year }), movieId, relatedMoviesSliced, MAX_RELATED_PER_MOVIE);
                 const expanded = new Set([movieId]);
 
-                const moviePromise2 = relatedMovies.map((l1Movie) => {
+                // for each recommended movie, create a promise to get 2-deep recommended movies
+                const moviePromise2 = relatedMoviesSliced.map((l1Movie) => {
                     return fetchRecommendedMovies(l1Movie.id, controller.signal)
                         .then((related) => ({id: l1Movie.id, related: related}))
                         .catch(() => null) // do nothing when fetch fails - fine to ignore some
                 })
 
-
+                // resolve all promises parallel-wise (not sequential)
                 const relatedMovies2Results = await Promise.all(moviePromise2);
 
                 relatedMovies2Results.forEach((movie2) => {
@@ -110,10 +113,12 @@ export default function MovieGraph({ movieId, title, year }: Readonly<Props>) {
                     }
                 })
 
+                // update all relevant nodes
                 setGraph(updatedGraph);
                 setExpandedIds(expanded);
                 setLoadingId(null);
                 shouldRefitRef.current = true;
+
             }).catch((err: Error) => {
                 if (err.name === "AbortError") {
                 return;
@@ -124,41 +129,6 @@ export default function MovieGraph({ movieId, title, year }: Readonly<Props>) {
 
     return () => controller.abort();
   }, [movieId, title, year]);
-
-  const handleNodeClick = useCallback(
-    (node: MovieGraphNode) => {
-      // A movie that has already been branched out from has nothing left to
-      // reveal, so a second click opens it instead.
-      if (expandedIds.has(node.id)) {
-        if (node.id !== movieId) {
-          navigate(`/movie/${node.id}`);
-        }
-        return;
-      }
-
-      if (loadingId !== null) {
-        return;
-      }
-
-      setLoadingId(node.id);
-      setError(null);
-
-      fetchRecommendedMovies(node.id)
-        .then((related) => {
-          setGraph((current) =>
-            addRelatedMovies(current, node.id, related, MAX_RELATED_PER_MOVIE),
-          );
-          setExpandedIds((current) => new Set(current).add(node.id));
-          setLoadingId(null);
-          shouldRefitRef.current = true;
-        })
-        .catch(() => {
-          setError("Could not load related movies.");
-          setLoadingId(null);
-        });
-    },
-    [expandedIds, loadingId, movieId, navigate],
-  );
 
   const nodeColor = useCallback(
     (node: MovieGraphNode) => {
@@ -258,7 +228,7 @@ export default function MovieGraph({ movieId, title, year }: Readonly<Props>) {
             nodePointerAreaPaint={paintPointerArea}
             linkColor={() => LINK_COLOR}
             linkWidth={1}
-            onNodeClick={handleNodeClick}
+            onNodeClick={(node) => navigate(`/movie/${node.id}`)}
             onEngineStop={handleEngineStop}
           />
         )}
