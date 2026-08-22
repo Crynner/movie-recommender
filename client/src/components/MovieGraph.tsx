@@ -12,8 +12,8 @@ import {
 } from "./movieGraphData";
 import "./MovieGraph.css";
 
-const GRAPH_HEIGHT = 420;
-const MAX_RELATED_PER_MOVIE = 8;
+const GRAPH_HEIGHT = 600;
+const MAX_RELATED_PER_MOVIE = 10;
 const MAX_LABEL_LENGTH = 24;
 
 const BACKGROUND_COLOR = "#16151a";
@@ -79,32 +79,48 @@ export default function MovieGraph({ movieId, title, year }: Readonly<Props>) {
     return () => observer.disconnect();
   }, []);
 
-  // Start over whenever the page moves to a different movie.
-  useEffect(() => {
-    const controller = new AbortController();
+    // Start over whenever the page moves to a different movie.
+    useEffect(() => {
+        const controller = new AbortController();
 
-    setGraph(createGraph({ id: movieId, title, year }));
-    setExpandedIds(new Set());
-    setError(null);
-    setLoadingId(movieId);
-    shouldRefitRef.current = true;
-
-    fetchRecommendedMovies(movieId, controller.signal)
-      .then((related) => {
-        setGraph((current) =>
-          addRelatedMovies(current, movieId, related, MAX_RELATED_PER_MOVIE),
-        );
-        setExpandedIds(new Set([movieId]));
-        setLoadingId(null);
+        setGraph(createGraph({ id: movieId, title, year }));
+        setExpandedIds(new Set());
+        setError(null);
+        setLoadingId(movieId);
         shouldRefitRef.current = true;
-      })
-      .catch((err: Error) => {
-        if (err.name === "AbortError") {
-          return;
-        }
-        setError("Could not load related movies.");
-        setLoadingId(null);
-      });
+
+        fetchRecommendedMovies(movieId, controller.signal)
+            .then(async (relatedMovies) => {
+                let updatedGraph = addRelatedMovies(createGraph({ id: movieId, title, year }), movieId, relatedMovies, MAX_RELATED_PER_MOVIE);
+                const expanded = new Set([movieId]);
+
+                const moviePromise2 = relatedMovies.map((l1Movie) => {
+                    return fetchRecommendedMovies(l1Movie.id, controller.signal)
+                        .then((related) => ({id: l1Movie.id, related: related}))
+                        .catch(() => null) // do nothing when fetch fails - fine to ignore some
+                })
+
+
+                const relatedMovies2Results = await Promise.all(moviePromise2);
+
+                relatedMovies2Results.forEach((movie2) => {
+                    if (movie2) { // for all promises that didn't fail
+                        updatedGraph = addRelatedMovies(updatedGraph, movie2.id, movie2.related, MAX_RELATED_PER_MOVIE);
+                        expanded.add(movie2.id);
+                    }
+                })
+
+                setGraph(updatedGraph);
+                setExpandedIds(expanded);
+                setLoadingId(null);
+                shouldRefitRef.current = true;
+            }).catch((err: Error) => {
+                if (err.name === "AbortError") {
+                return;
+                }
+                setError("Could not load related movies.");
+                setLoadingId(null);
+            })
 
     return () => controller.abort();
   }, [movieId, title, year]);
