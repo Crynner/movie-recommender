@@ -7,26 +7,7 @@ import { server } from "../test/server";
 import MovieGraph from "./MovieGraph";
 import type { MovieGraphData, MovieGraphNode } from "./movieGraphData";
 
-// The real graph draws to a canvas, which jsdom has no renderer for. Standing in
-// for it with buttons keeps the data and the click handling under test.
-// vi.mock("react-force-graph-2d", () => ({
-//   default: ({
-//     graphData,
-//     onNodeClick,
-//   }: Readonly<{
-//     graphData: MovieGraphData;
-//     onNodeClick: (node: MovieGraphNode) => void;
-//   }>) => (
-//     <div data-testid="graph">
-//       {graphData.nodes.map((node) => (
-//         <button key={node.id} type="button" onClick={() => onNodeClick(node)}>
-//           {node.title}
-//         </button>
-//       ))}
-//     </div>
-//   ),
-// }));
-
+// mocks graph due to jsdom limitations for canvas rendering
 vi.mock("react-force-graph-2d", () => ({
 default: ({
     graphData,
