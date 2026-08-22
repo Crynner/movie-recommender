@@ -210,8 +210,7 @@ export default function MovieGraph({ movieId, title, year }: Readonly<Props>) {
   return (
     <div className="movie-graph">
       <p className="movie-graph__hint">
-        Click a movie to branch out from it, click it again to open its page. Drag the
-        movies around to untangle them, scroll to zoom.
+        Click a movie node to view its detail page. Scroll to zoom, and drag to pan. Nodes can be dragged around.
       </p>
 
       <div className="movie-graph__canvas" ref={containerRef} style={{ height: GRAPH_HEIGHT }}>
@@ -228,15 +227,19 @@ export default function MovieGraph({ movieId, title, year }: Readonly<Props>) {
             nodePointerAreaPaint={paintPointerArea}
             linkColor={() => LINK_COLOR}
             linkWidth={1}
-            onNodeClick={(node) => navigate(`/movie/${node.id}`)}
+            onNodeClick={(node) => {
+                if (Number(node.id) !== movieId) { // do nothing if clicked center node
+                    navigate(`/movie/${node.id}`)
+                }
+            }}
             onEngineStop={handleEngineStop}
           />
         )}
       </div>
-
-      <p className="movie-graph__status" aria-live="polite">
+      <p className="movie-graph__status" aria-live="polite"> 
         {status}
       </p>
     </div>
+    
   );
 }
